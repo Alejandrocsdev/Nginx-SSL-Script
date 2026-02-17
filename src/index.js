@@ -1,14 +1,21 @@
 const fs = require('fs');
 const path = require('path');
 
-const configPath = path.join(__dirname, '..', 'domain.json');
-const templatePath = path.join(__dirname, 'template.txt');
+const configPath = path.join(__dirname, '..', 'config.json');
 
 const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
-const template = fs.readFileSync(templatePath, 'utf8');
 
 const removeDomain = require('./remove');
 const deployDomain = require('./deploy');
+
+const showUsage = () => {
+  console.error('\n❌ Invalid argument. Use either:\n');
+  console.error('./run.sh');
+  console.error('./run.sh --static');
+  console.error('./run.sh --www');
+  console.error('./run.sh --remove\n');
+  process.exit(1);
+};
 
 const main = () => {
   // Ensure script is run as root
@@ -19,20 +26,38 @@ const main = () => {
 
   const args = process.argv.slice(2);
 
-  if (args.length === 0) {
-    deployDomain(config, template);
-    return;
+  if (args.length > 1) {
+    return showUsage();
   }
 
-  if (args.length === 1 && args[0] === '--remove') {
-    removeDomain(config);
-    return;
-  }
+  const arg = args[0];
 
-  console.error('❌ Invalid argument. Use either:');
-  console.error('./run.sh           (deploy)');
-  console.error('./run.sh --remove  (remove)');
-  process.exit(1);
+  try {
+    if (!arg) {
+      deployDomain(config, { mode: 'proxy' });
+      return;
+    }
+
+    if (arg === '--static') {
+      deployDomain(config, { mode: 'static' });
+      return;
+    }
+
+    if (arg === '--www') {
+      deployDomain(config, { mode: 'www' });
+      return;
+    }
+
+    if (arg === '--remove') {
+      removeDomain(config);
+      return;
+    }
+
+    showUsage();
+  } catch (error) {
+    console.error('❌ Operation failed:', error.message);
+    process.exit(1);
+  }
 };
 
 main();

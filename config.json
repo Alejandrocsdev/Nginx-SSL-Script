@@ -1,0 +1,17 @@
+{
+  "serverName": "www.example.com",
+  "static": {
+    "rootPath": "/path/to/dist",
+    "www": {
+      "rootName": "example.com"
+    }
+  },
+  "ssl": {
+    "email": "your@email.com"
+  },
+  "upstream": {
+    "host": "localhost",
+    "port": 3000,
+    "protocol": "http"
+  }
+}

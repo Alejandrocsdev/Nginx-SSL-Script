@@ -1,33 +1,115 @@
 const fs = require('fs');
-const { execSync } = require('child_process');
+const path = require('path');
+const { execFileSync } = require('child_process');
 
 const valid = require('./utils');
 
-const deployDomain = (config, template) => {
-  const { serverName, ssl, upstream } = config;
-  const { host, port, protocol } = upstream;
-
-  if (!valid.host(host)) {
-    console.error('❌ Invalid host. Must be IPv4 or localhost.');
-    process.exit(1);
+const prepareStaticFiles = (sourcePath, targetPath) => {
+  if (!fs.existsSync(targetPath)) {
+    execFileSync('mkdir', ['-p', targetPath]);
   }
 
-  if (!valid.port(port)) {
-    console.error('❌ Invalid port. Must be 1-65535.');
-    process.exit(1);
+  // Clean target folder
+  if (fs.existsSync(targetPath)) {
+    const files = fs.readdirSync(targetPath);
+    for (const file of files) {
+      fs.rmSync(path.join(targetPath, file), { recursive: true, force: true });
+    }
   }
 
-  if (!valid.protocol(protocol)) {
-    console.error('❌ Invalid protocol. Must be http or https.');
-    process.exit(1);
+  // Copy build output
+  execFileSync('cp', ['-r', `${sourcePath}/.`, targetPath]);
+
+  // Fix ownership
+  execFileSync('chown', ['-R', 'www-data:www-data', targetPath]);
+};
+
+const deployDomain = (config, options) => {
+  const { serverName, ssl, static, upstream } = config;
+  const { mode } = options;
+
+  const templatesDir = path.join(__dirname, 'templates');
+
+  let templateFile;
+  let deployPath;
+  let finalConfig;
+
+  // ===============================
+  // PROXY MODE
+  // ===============================
+
+  if (mode === 'proxy') {
+    const { host, port, protocol } = upstream;
+
+    if (!valid.host(host)) throw new Error('Invalid proxy host');
+    if (!valid.port(port)) throw new Error('Invalid proxy port');
+    if (!valid.protocol(protocol)) throw new Error('Invalid proxy protocol');
+
+    templateFile = path.join(templatesDir, 'proxy.txt');
+
+    const template = fs.readFileSync(templateFile, 'utf8');
+
+    const proxyTarget = `${protocol}://${host}:${port}`;
+
+    finalConfig = template
+      .replace(/{{SERVER_NAME}}/g, serverName)
+      .replace(/{{PROXY_TARGET}}/g, proxyTarget);
   }
 
-  const proxyTarget = `${protocol}://${host}:${port}`;
+  // ===============================
+  // STATIC MODE
+  // ===============================
 
-  // Replace placeholders in template
-  const finalConfig = template
-    .replace(/{{SERVER_NAME}}/g, serverName)
-    .replace(/{{PROXY_TARGET}}/g, proxyTarget);
+  if (mode === 'static') {
+    if (!static?.rootPath) {
+      throw new Error('static.rootPath is missing in config.json');
+    }
+
+    templateFile = path.join(templatesDir, 'static.txt');
+    const template = fs.readFileSync(templateFile, 'utf8');
+
+    deployPath = `/var/www/${serverName}`;
+
+    prepareStaticFiles(static.rootPath, deployPath);
+
+    finalConfig = template
+      .replace(/{{SERVER_NAME}}/g, serverName)
+      .replace(/{{STATIC_ROOT}}/g, deployPath);
+  }
+
+  // ===============================
+  // WWW MODE (Static + canonical)
+  // ===============================
+
+  if (mode === 'www') {
+    if (!static?.rootPath) {
+      throw new Error('static.rootPath is missing');
+    }
+
+    if (!static?.www?.rootName) {
+      throw new Error('static.www.rootName is missing');
+    }
+
+    templateFile = path.join(templatesDir, 'www.txt');
+    const template = fs.readFileSync(templateFile, 'utf8');
+
+    deployPath = `/var/www/${static.www.rootName}`;
+
+    prepareStaticFiles(static.rootPath, deployPath);
+
+    finalConfig = template
+      .replace(/{{SERVER_NAME}}/g, serverName)
+      .replace(/{{STATIC_ROOT}}/g, deployPath)
+      .replace(/{{ROOT_NAME}}/g, static.www.rootName);
+  }
+
+  if (!finalConfig) {
+    throw new Error('Invalid mode');
+  }
+
+  // ===============================
+  // Write Nginx Config
+  // ===============================
 
   // Nginx standard directory structure
   const outputPath = `/etc/nginx/sites-available/${serverName}`;
@@ -41,33 +123,31 @@ const deployDomain = (config, template) => {
   // Write new config to temporary location first
   fs.writeFileSync(tempPath, finalConfig);
 
-  // Backup existing config if it exists
   if (fs.existsSync(outputPath)) {
     console.log('Backing up existing config...');
-    execSync(`cp ${outputPath} ${outputPath}.bak`);
+    execFileSync('cp', ['-f', outputPath, `${outputPath}.bak`]);
   }
 
-  // Move temp config into nginx directory
-  execSync(`mv ${tempPath} ${outputPath}`);
+  execFileSync('mv', [tempPath, outputPath]);
 
   if (!fs.existsSync(enabledPath)) {
-    execSync(`ln -s ${outputPath} ${enabledPath}`);
+    execFileSync('ln', ['-s', outputPath, enabledPath]);
   }
 
   try {
     console.log('Testing nginx config...');
 
     // Test nginx config before reload
-    execSync('nginx -t', { stdio: 'inherit' });
+    execFileSync('nginx', ['-t'], { stdio: 'inherit' });
   } catch (error) {
     console.error('❌ nginx test failed. Restoring backup...');
 
     // Restore backup if exists
     if (fs.existsSync(`${outputPath}.bak`)) {
-      execSync(`mv ${outputPath}.bak ${outputPath}`);
+      execFileSync('mv', [`${outputPath}.bak`, outputPath]);
     } else {
       // Remove broken config if no backup existed
-      execSync(`rm -f ${outputPath}`);
+      execFileSync('rm', ['-f', outputPath]);
     }
 
     process.exit(1);
@@ -76,39 +156,43 @@ const deployDomain = (config, template) => {
   console.log('Reloading nginx...');
 
   // Reload nginx only if config test passed
-  execSync('systemctl reload nginx');
+  execFileSync('systemctl', ['reload', 'nginx'], { stdio: 'inherit' });
 
   console.log('\n✅ Nginx configuration completed!\n');
 
-  if (ssl.enabled) {
-    console.log('SSL enabled. Checking certbot...');
+  // ===============================
+  // SSL
+  // ===============================
 
-    try {
-      execSync('which certbot', { stdio: 'ignore' });
-    } catch {
-      console.log('Installing certbot...');
-      execSync('apt install certbot python3-certbot-nginx', {
-        stdio: 'inherit',
-      });
-    }
-
-    try {
-      execSync('dpkg -l | grep python3-certbot-nginx', { stdio: 'ignore' });
-    } catch {
-      console.log('Installing python3-certbot-nginx...');
-      execSync('apt install certbot python3-certbot-nginx', {
-        stdio: 'inherit',
-      });
-    }
-
-    console.log('Requesting SSL certificate...');
-    execSync(
-      `certbot --nginx -d ${serverName} --non-interactive --agree-tos -m ${ssl.email} --redirect`,
-      { stdio: 'inherit' },
-    );
-
-    console.log('\n✅ SSL setup completed.\n');
+  if (!ssl?.email) {
+    throw new Error('SSL enabled but ssl.email is missing in config.json');
   }
+
+  console.log('Requesting SSL certificate...');
+
+  let certDomains = ['-d', serverName];
+
+  // If www mode, include root domain too
+  if (mode === 'www' && static?.www?.rootName) {
+    certDomains.push('-d', static.www.rootName);
+  }
+
+  execFileSync(
+    'certbot',
+    [
+      '--nginx',
+			'--staging',
+      ...certDomains,
+      '--non-interactive',
+      '--agree-tos',
+      '-m',
+      ssl.email,
+      '--redirect',
+    ],
+    { stdio: 'inherit' },
+  );
+
+  console.log('\n✅ SSL setup completed.\n');
 };
 
 module.exports = deployDomain;

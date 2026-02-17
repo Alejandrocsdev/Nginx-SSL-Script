@@ -1,0 +1,14 @@
+# ----------------------------------------
+# Static Site (HTTP only - SSL handled by Certbot)
+# ----------------------------------------
+server {
+    listen 80;
+    server_name {{SERVER_NAME}};
+
+    root {{STATIC_ROOT}};
+    index index.html;
+
+    location / {
+        try_files $uri /index.html;
+    }
+}

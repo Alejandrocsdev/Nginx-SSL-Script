@@ -1,4 +1,4 @@
-const { execSync } = require('child_process');
+const { execFileSync } = require('child_process');
 
 const removeDomain = (config) => {
   const { serverName } = config;
@@ -10,20 +10,20 @@ const removeDomain = (config) => {
 
   // Remove symlink first
   try {
-    execSync(`rm -f ${enabledPath}`);
+    execFileSync('rm', ['-f', enabledPath]);
     console.log('Removed sites-enabled symlink.');
   } catch {}
 
   // Remove config file
   try {
-    execSync(`rm -f ${outputPath}`);
+    execFileSync('rm', ['-f', outputPath]);
     console.log('Removed sites-available config.');
   } catch {}
 
   // Test nginx config
   try {
     console.log('Testing nginx config...');
-    execSync('nginx -t', { stdio: 'inherit' });
+    execFileSync('nginx', ['-t'], { stdio: 'inherit' });
   } catch (error) {
     console.error('❌ nginx test failed after removal.');
     process.exit(1);
@@ -31,14 +31,18 @@ const removeDomain = (config) => {
 
   // Reload nginx
   console.log('Reloading nginx...');
-  execSync('systemctl reload nginx');
+  execFileSync('systemctl', ['reload', 'nginx'], { stdio: 'inherit' });
 
   // Delete certbot certificate (if exists)
   try {
     console.log('Checking for certificate...');
-    execSync(`certbot delete --cert-name ${serverName} --non-interactive`, {
-      stdio: 'inherit',
-    });
+    execFileSync(
+      'certbot',
+      ['delete', '--cert-name', serverName, '--non-interactive'],
+      {
+        stdio: 'inherit',
+      },
+    );
     console.log('Certificate deleted.');
   } catch {
     console.log('No certificate found or already deleted.');
