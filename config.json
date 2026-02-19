@@ -1,17 +1,27 @@
 {
-  "serverName": "www.example.com",
-  "static": {
-    "rootPath": "/path/to/dist",
-    "www": {
-      "rootName": "example.com"
+  "domain": {
+    "primary": "www.example.com",
+    "aliases": ["example.com"]
+  },
+  "hosting": {
+    "type": "proxy",
+    "static": {
+      "sourcePath": "/path/to/dist"
+    },
+    "proxy": {
+      "host": "localhost",
+      "port": 3000
     }
   },
   "ssl": {
-    "email": "your@email.com"
-  },
-  "upstream": {
-    "host": "localhost",
-    "port": 3000,
-    "protocol": "http"
+    "provider": "letsencrypt",
+    "letsencrypt": {
+      "email": "your@email.com",
+      "staging": true
+    },
+    "selfsigned": {
+      "days": 365,
+      "keySize": 2048
+    }
   }
 }
