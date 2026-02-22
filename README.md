@@ -1,4 +1,4 @@
-# 🚀 Nginx SSL Deployment Script (Ubuntu)
+# Nginx SSL Script (Ubuntu)
 
 A lightweight automation tool for deploying and removing Nginx site configurations on Ubuntu, supporting:
 
