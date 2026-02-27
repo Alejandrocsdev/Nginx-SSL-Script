@@ -9,7 +9,7 @@ const generateSSL = (config) => {
   const { primary, aliases } = domain;
 
   const domains = [primary, ...aliases];
-	const { sslCert, sslKey } = getSSLPath(ssl.provider, primary);
+  const { sslCert, sslKey } = getSSLPath(ssl.provider, primary);
 
   console.log('\n🔅 Generating SSL certificate...\n');
 
@@ -33,19 +33,11 @@ const generateSSL = (config) => {
       certbotArgs.push('--staging');
     }
 
-    try {
-      execFileSync('certbot', certbotArgs, {
-        encoding: 'utf8',
-        // stdin | stdout | stderr
-        stdio: ['ignore', 'pipe', 'pipe'],
-      });
-    } catch (error) {
-      console.error('❌ Operation failed:');
-      if (error.stdout) console.error(error.stdout);
-      console.error(error.stderr);
-			rollback(primary)
-      process.exit(1);
-    }
+    execFileSync('certbot', certbotArgs, {
+      encoding: 'utf8',
+      // stdin | stdout | stderr
+      stdio: ['ignore', 'pipe', 'pipe'],
+    });
 
     console.log('Certificate:', blue(sslCert));
     console.log('Key:', blue(sslKey));
@@ -77,19 +69,11 @@ const generateSSL = (config) => {
 
     execFileSync('mkdir', ['-p', `/etc/nginx/ssl/${primary}`]);
 
-    try {
-      execFileSync('openssl', opensslArgs, {
-        encoding: 'utf8',
-        // stdin | stdout | stderr
-        stdio: ['ignore', 'pipe', 'pipe'],
-      });
-    } catch (error) {
-      console.error('❌ Operation failed:');
-      if (error.stdout) console.error(error.stdout);
-      console.error(error.stderr);
-			rollback(primary)
-      process.exit(1);
-    }
+    execFileSync('openssl', opensslArgs, {
+      encoding: 'utf8',
+      // stdin | stdout | stderr
+      stdio: ['ignore', 'pipe', 'pipe'],
+    });
 
     console.log('Certificate:', blue(sslCert));
     console.log('Key:', blue(sslKey));

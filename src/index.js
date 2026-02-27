@@ -11,13 +11,13 @@ const { rollback, validateConfig } = require('./utils');
 const main = () => {
   const args = process.argv.slice(2);
 
-	let primary;
+  let primary;
 
   try {
     const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
     validateConfig(config);
 
-		primary = config.domain.primary
+    primary = config.domain.primary;
 
     if (args.length === 0) {
       deployDomain(config);
@@ -29,10 +29,12 @@ const main = () => {
       return;
     }
 
-    throw new Error(`Invalid command flag: ${args.join(' ')}`);
+    return console.error(`❌ Invalid command flag: ${args.join(' ')}`);
   } catch (error) {
-    console.error('❌ Operation failed:', error.message);
-		rollback(primary)
+    console.error('❌ Operation failed:');
+    if (error.stdout) console.error(error.stdout);
+    console.error(error.stderr);
+    rollback(primary);
     process.exit(1);
   }
 };
