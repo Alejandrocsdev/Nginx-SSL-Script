@@ -11,8 +11,6 @@ const generateSSL = (config) => {
   const domains = [primary, ...aliases];
   const { sslCert, sslKey } = getSSLPath(ssl.provider, primary);
 
-  console.log('\n🔅 Generating SSL certificate...\n');
-
   // =========================================================
   // LET'S ENCRYPT
   // =========================================================
@@ -33,10 +31,11 @@ const generateSSL = (config) => {
       certbotArgs.push('--staging');
     }
 
-    console.log('🛑 Stopping nginx...\n');
+    console.log('\n🛑 Stopping nginx...\n');
     execFileSync('systemctl', ['stop', 'nginx']);
 
     try {
+			console.log('🔅 Generating SSL certificate...\n');
       execFileSync('certbot', certbotArgs, {
         encoding: 'utf8',
         // stdin | stdout | stderr
