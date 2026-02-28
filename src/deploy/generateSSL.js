@@ -33,11 +33,20 @@ const generateSSL = (config) => {
       certbotArgs.push('--staging');
     }
 
-    execFileSync('certbot', certbotArgs, {
-      encoding: 'utf8',
-      // stdin | stdout | stderr
-      stdio: ['ignore', 'pipe', 'pipe'],
-    });
+    console.log('🛑 Stopping nginx...\n');
+    execFileSync('systemctl', ['stop', 'nginx']);
+
+    try {
+      execFileSync('certbot', certbotArgs, {
+        encoding: 'utf8',
+        // stdin | stdout | stderr
+        stdio: ['ignore', 'pipe', 'pipe'],
+      });
+			console.log('🟢 SSL certificate generated successfully!\n');
+    } finally {
+      console.log('🟢 Starting nginx...\n');
+      execFileSync('systemctl', ['start', 'nginx']);
+    }
 
     console.log('Certificate:', blue(sslCert));
     console.log('Key:', blue(sslKey));

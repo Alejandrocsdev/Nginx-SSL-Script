@@ -4,7 +4,9 @@ const activateNginx = require('./activateNginx')
 
 const deployDomain = (config) => {
   configureNginx(config)
+	// Stop nginx
   generateSSL(config)
+	// Start nginx
   activateNginx(config)
 }
 
