@@ -48,8 +48,8 @@ const validateConfig = (config) => {
       throw new Error('Missing "hosting.static"');
     }
 
-    if (!('sourcePath' in static)) {
-      throw new Error('Missing "hosting.static.sourcePath"');
+    if (!('projectName' in static)) {
+      throw new Error('Missing "hosting.static.projectName"');
     }
   }
 

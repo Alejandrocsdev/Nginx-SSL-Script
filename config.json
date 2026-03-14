@@ -6,7 +6,7 @@
   "hosting": {
     "type": "proxy",
     "static": {
-      "sourcePath": "/path/to/dist"
+      "projectName": ""
     },
     "proxy": {
       "host": "localhost",

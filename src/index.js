@@ -33,7 +33,7 @@ const main = () => {
   } catch (error) {
     console.error('❌ Operation failed:');
     if (error.stdout) console.error(error.stdout);
-    console.error(error.stderr);
+    console.error(error.stderr || error.message);
     rollback(primary);
     process.exit(1);
   }

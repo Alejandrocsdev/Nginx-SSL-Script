@@ -28,16 +28,14 @@ const configureNginx = (config) => {
   }
 
   if (hosting.type === 'static') {
-    const { sourcePath } = hosting.static;
-    const deployPath = `/var/www/${primary}`;
+    const { projectName } = hosting.static;
+
+    const deployPath = `/var/www/${primary}/${projectName}`;
 
     // ---------- Static files ----------
     console.log('🔅 Generating static deployment...\n');
 
-    execFileSync('cp', ['-r', `${sourcePath}/.`, deployPath]);
-
-		const owner = process.env.OWNER;
-    execFileSync('chown', ['-R', `${owner}:${owner}`, deployPath]);
+		execFileSync('mkdir', ['-p', deployPath]);
 
     console.log('Static deployment directory:', blue(deployPath));
 
