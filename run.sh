@@ -12,7 +12,11 @@ if [ -z "$NODE_PATH" ]; then
   exit 1
 fi
 
+# Save current user BEFORE sudo
+export OWNER=$USER
+
 echo "Using Node: $NODE_PATH"
+echo "Deploy owner: $OWNER"
 
 # Run script with sudo using full node path (forward all arguments)
-sudo "$NODE_PATH" src/index.js "$@"
+sudo OWNER="$OWNER" "$NODE_PATH" src/index.js "$@"

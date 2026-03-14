@@ -1,7 +1,7 @@
 const { execFileSync } = require('child_process');
 
 const getSSLPath = require('./getSSLPath');
-const { color, rollback } = require('../utils');
+const { color } = require('../utils');
 const { blue } = color;
 
 const generateSSL = (config) => {

@@ -32,11 +32,14 @@ const configureNginx = (config) => {
     const deployPath = `/var/www/${primary}`;
 
     // ---------- Static files ----------
-		console.log('🔅 Generating static deployment...\n')
-    execFileSync('mkdir', ['-p', deployPath]);
+    console.log('🔅 Generating static deployment...\n');
+
     execFileSync('cp', ['-r', `${sourcePath}/.`, deployPath]);
-    execFileSync('chown', ['-R', 'www-data:www-data', deployPath]);
-		console.log('Static deployment directory:', blue(deployPath));
+
+		const owner = process.env.OWNER;
+    execFileSync('chown', ['-R', `${owner}:${owner}`, deployPath]);
+
+    console.log('Static deployment directory:', blue(deployPath));
 
     template = fs.readFileSync(staticSitePath, 'utf8');
     template = template.replace(/{{DEPLOY_PATH}}/g, deployPath);

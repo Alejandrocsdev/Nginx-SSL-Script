@@ -1,6 +1,6 @@
 const { execFileSync } = require('child_process');
 
-const { color, rollback } = require('../utils');
+const { color } = require('../utils');
 const { green } = color;
 
 const activateNginx = (config) => {
