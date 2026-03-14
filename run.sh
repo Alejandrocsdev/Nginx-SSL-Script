@@ -19,4 +19,4 @@ echo "Using Node: $NODE_PATH"
 echo "Deploy owner: $OWNER"
 
 # Run script with sudo using full node path (forward all arguments)
-sudo OWNER="$OWNER" "$NODE_PATH" src/index.js "$@"
+sudo "$NODE_PATH" src/index.js "$@"
